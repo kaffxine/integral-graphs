@@ -2,9 +2,11 @@
 name = "integral-graphs"
 version = "0.1.0"
 edition = "2021"
+include = ["src/*", "bin/*", "Cargo.toml"]
 
 [dependencies]
 rand = "0.8"
+tempfile = "3.15"
 
 [profile.dev]
 overflow-checks = false
