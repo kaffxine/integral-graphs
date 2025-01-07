@@ -5,6 +5,7 @@ edition = "2021"
 include = ["src/*", "bin/*", "Cargo.toml"]
 
 [dependencies]
+itertools = "0.14"
 rand = "0.8"
 tempfile = "3.15"
 

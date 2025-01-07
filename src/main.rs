@@ -9,15 +9,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         panic!("do not run this program on non-64-bit arch");
     }
     
-    let n = 7;
+    let n = 5;
     let adjm = AdjMatrix::random(n, 0.5)?;
-    println!("{:?}", adjm);
-    println!("{}", adjm);
-    println!("{:?}", adjm.adj_lists());
-    println!("{}", adjm.base64());
-    let g6 = adjm.graph6()?;
-    let cano = labelg(g6.clone())?;
-    println!("g6={} cano={}", g6, cano);
+    let perms = adjm.permutations();
+    for p in perms {
+        let g = p.graph6()?;
+        let c = labelg(g.clone())?;
+        println!("{} {}", g, c);
+    }
 
     Ok(())
 }

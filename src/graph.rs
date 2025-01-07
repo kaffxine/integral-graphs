@@ -2,6 +2,7 @@ use std::alloc;
 use std::error;
 use std::fmt;
 use std::ptr;
+use itertools::Itertools;
 use rand::thread_rng;
 use rand::distributions::{Distribution, Bernoulli};
 
@@ -51,22 +52,30 @@ impl AdjMatrix {
 
     /// Initialize a graph from adjacency lists.
     pub fn from_adj_lists(adj_lists: Vec<(u32, Vec<u32>)>) -> Result<Self, String> {
+        let mut max: u32 = 0;
+        for (node, adj_list) in &adj_lists {
+            if *node > max {
+                max = *node;
+            }
+            for &node in adj_list {
+                if node > max {
+                    max = node;
+                }
+            }
+        }
+
+        let (last_node, n_bits, n_bytes) = Self::calculate_primitive_fields(max as u64 + 1)?;
+
         let mut output = Self {
-            last_node: 0,
-            n_bits: 0,
-            n_bytes: 0,
-            data: ptr::null_mut(),
+            last_node,
+            n_bits,
+            n_bytes,
+            data: unsafe { Self::alloc(n_bytes)? },
         };
 
         for adj_list in adj_lists.into_iter() {
             let (node, adj_list) = adj_list;
-            if node > output.last_node {
-                unsafe { output = output.realloc(node)?; };
-            }
             for adj in adj_list.into_iter() {
-                if adj > output.last_node {
-                    unsafe { output = output.realloc(adj)?; };
-                }
                 let index = output.index_of(node, adj)?;
                 output.set(node, adj, true)?;
             }
@@ -96,6 +105,50 @@ impl AdjMatrix {
                 output.push(i);
             }
         }
+        output
+    }
+
+    /// Generate all graphs isomorphic to the graph.
+    /// Warning: exponential complexity!
+    pub fn permutations(&self) -> Vec<Self> {
+        
+        let adj_lists = self.adj_lists();
+        println!("original_aj: {adj_lists:?}");
+
+        let output_adj_lists: Vec<Vec<(u32, Vec<u32>)>> = (0..=self.last_node)
+            .permutations(self.last_node as usize + 1)
+            .map(|order| {
+                println!("order: {order:?}");
+                let mut inverted_order = vec![0u32; self.last_node as usize + 1];
+                order
+                    .iter()
+                    .enumerate()
+                    .for_each(|(index, &value)| {
+                        inverted_order[value as usize] = index as u32;
+                    });
+                (0..=self.last_node)
+                    .map(|i| {
+                        let (_, list) = adj_lists[order[i as usize] as usize].clone();
+                        println!("  adj_lists[{}]: {:?}", order[i as usize], list);
+                        (i, list
+                            .iter()
+                            .map(|adj| {
+                                println!("    {} mapped to {}", adj, inverted_order[*adj as usize]);
+                                inverted_order[*adj as usize]
+                            })
+                            .collect::<Vec<u32>>())
+                    })
+                    .collect()
+            })
+            .collect();
+
+        println!("output: {output_adj_lists:?}");
+
+        let mut output = Vec::new();
+        for al in output_adj_lists.into_iter() {
+            output.push(Self::from_adj_lists(al).expect("xd"));
+        }
+
         output
     }
 
@@ -250,8 +303,6 @@ impl AdjMatrix {
 
         Ok(data)
     }
-
-
 
     unsafe fn realloc(mut self, last_node: u32) -> Result<Self, String> {
         let n_nodes = last_node as u64 + 1;
