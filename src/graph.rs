@@ -111,14 +111,11 @@ impl AdjMatrix {
     /// Generate all graphs isomorphic to the graph.
     /// Warning: exponential complexity!
     pub fn permutations(&self) -> Vec<Self> {
-        
         let adj_lists = self.adj_lists();
-        println!("original_aj: {adj_lists:?}");
 
-        let output_adj_lists: Vec<Vec<(u32, Vec<u32>)>> = (0..=self.last_node)
+        (0..=self.last_node)
             .permutations(self.last_node as usize + 1)
             .map(|order| {
-                println!("order: {order:?}");
                 let mut inverted_order = vec![0u32; self.last_node as usize + 1];
                 order
                     .iter()
@@ -126,30 +123,20 @@ impl AdjMatrix {
                     .for_each(|(index, &value)| {
                         inverted_order[value as usize] = index as u32;
                     });
-                (0..=self.last_node)
+                Self::from_adj_lists((0..=self.last_node)
                     .map(|i| {
                         let (_, list) = adj_lists[order[i as usize] as usize].clone();
-                        println!("  adj_lists[{}]: {:?}", order[i as usize], list);
                         (i, list
                             .iter()
                             .map(|adj| {
-                                println!("    {} mapped to {}", adj, inverted_order[*adj as usize]);
                                 inverted_order[*adj as usize]
                             })
-                            .collect::<Vec<u32>>())
+                            .collect())
                     })
-                    .collect()
+                    .collect())
+                    .expect("Internal error at AdjMatrix::permutations()")
             })
-            .collect();
-
-        println!("output: {output_adj_lists:?}");
-
-        let mut output = Vec::new();
-        for al in output_adj_lists.into_iter() {
-            output.push(Self::from_adj_lists(al).expect("xd"));
-        }
-
-        output
+            .collect()
     }
 
     /// Encode the graph in base64.
