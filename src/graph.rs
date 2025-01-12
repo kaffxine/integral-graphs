@@ -84,8 +84,8 @@ impl AdjMatrix {
         Ok(output)
     }
 
-    /// Return adjacency lists of each node.
-    pub fn adj_lists(&self) -> Vec<(u32, Vec<u32>)> {
+    /// Return adjacency lists of all the nodes.
+    pub fn to_adj_lists(&self) -> Vec<(u32, Vec<u32>)> {
         let output: Vec<(u32, Vec<u32>)> = (0..(self.last_node + 1))
             .map(|index| (index, self.adj_list(index)))
             .collect();
@@ -140,7 +140,7 @@ impl AdjMatrix {
     }
 
     /// Encode the graph in base64.
-    pub fn base64(&self) -> String {
+    pub fn to_base64(&self) -> String {
         let n_chunks = self.n_bits / 6;
         let n_remaining_bits = (self.n_bits % 6) as u8;
         let mut output = String::with_capacity(n_chunks as usize + (n_remaining_bits != 0) as usize);
@@ -171,14 +171,14 @@ impl AdjMatrix {
     }
 
     /// Encode the graph in graph6.
-    pub fn graph6(&self) -> Result<String, String> {
+    pub fn to_graph6(&self) -> Result<String, String> {
         if self.last_node > 64 {
             return Err("Cannot encode a graph with more than 64 vertices in graph6".to_string());
         }
         
         let mut output = String::with_capacity(((self.n_bits + 1) / 6 + 1) as usize);
         output.push((self.last_node as u8 + 64) as char);
-        output.push_str(&self.base64());
+        output.push_str(&self.to_base64());
         
         Ok(output)
     }
