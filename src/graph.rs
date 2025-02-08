@@ -2,6 +2,8 @@ use std::alloc;
 use std::error;
 use std::fmt;
 use std::ptr;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use itertools::Itertools;
 use rand::thread_rng;
 use rand::distributions::{Distribution, Bernoulli};
@@ -106,6 +108,10 @@ impl AdjMatrix {
             }
         }
         output
+    }
+
+    pub fn get_last_node(&self) -> u32 {
+        self.last_node
     }
 
     pub fn from_graph6(input: String) -> Result<Self, String> {
@@ -221,7 +227,7 @@ impl AdjMatrix {
 
         output
     }
-    
+
     /// Generate all graphs isomorphic to the graph.
     /// Warning: exponential complexity!
     pub fn permutations(&self) -> Vec<Self> {
@@ -275,7 +281,7 @@ impl AdjMatrix {
 
     /// Change the value of a matrix field
     /// corresponding to the indices of two nodes.
-    fn set(&mut self, node_a: u32, node_b: u32, value: bool) -> Result<(), String> {
+    pub fn set(&mut self, node_a: u32, node_b: u32, value: bool) -> Result<(), String> {
         let bit_index = self.index_of(node_a, node_b)?;
         let byte_index = (bit_index as usize) / 8;
         let bit_index = bit_index % 8;
@@ -393,6 +399,8 @@ impl fmt::Display for AdjMatrix {
         let mut adj_count = 1;
         let mut next_node_index = 1;
         
+        write!(f, "AdjMatrix({}):\n ", self.last_node + 1)?;
+
         // this code is so pretty i refuse to comment it
         loop {
             let byte_index = bit_index / 8;
@@ -419,7 +427,7 @@ impl fmt::Display for AdjMatrix {
                 if bit_index == self.n_bits {
                     break;
                 } else {
-                    write!(f, "\n");
+                    write!(f, "\n ")?;
                 }
             } else {
                 bit_index = (bit_index >> 3 << 3) + 8;
