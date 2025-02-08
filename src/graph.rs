@@ -108,10 +108,124 @@ impl AdjMatrix {
         output
     }
 
+    pub fn from_graph6(input: String) -> Result<Self, String> {
+        let mut input = input.into_bytes();
+        let len = input.len();
+
+        println!("input: {input:?}");
+
+        if len == 0 {
+            return Err("Cannot convert an empty String to AdjMatrix".to_string());
+        }
+
+        let n_nodes = (input[0] as u8 - 63) as u64;
+        if n_nodes > 62 {
+            return Err("This application supports graph6 up to 62 nodes".to_string());
+        }
+
+        let (last_node, n_bits, n_bytes) = Self::calculate_primitive_fields(n_nodes)?;
+
+        let expected_len = (n_bits as usize + 11) / 6;
+
+        if expected_len < len {
+            return Err(format!("Expected {} bits, but there are {} chunks", n_bits, len - 1));
+        }
+
+        for _ in (0..(expected_len - len)) {
+            input.push(0x3f);
+        }
+
+        let data = unsafe { Self::alloc(n_bytes)? };
+
+        for chunk_i in (0..(len - 1)) {
+            let byte_i = chunk_i * 6 / 8;
+            let bit_i = chunk_i * 6 % 8;
+            let chunk = input[chunk_i + 1] << 2 >> 2;
+
+            // chunk = 11111111
+            //
+            // mask0 for bit_i = 0: 11111100
+            // mask1 for bit_i = 0: 00000000
+            //
+            // mask0 for bit_i = 2: 00111111
+            // mask1 for bit_i = 2: 00000000
+            //
+            // mask0 for bit_i = 4: 00001111
+            // mask1 for bit_i = 4: 11000000
+            //
+            // mask0 for bit_i = 6: 00000011
+            // mask1 for bit_i = 6: 11110000
+            let mask0 = chunk << 2 >> bit_i;
+            let mask1 = if bit_i < 3 {
+                0
+            } else {
+                chunk << (10 - bit_i)
+            };
+
+            unsafe { *data.add(byte_i) |= mask0; };
+            if bit_i > 2 {
+                unsafe { *data.add(byte_i + 1) |= mask1; };
+            }
+        }
+
+        Ok(Self {
+            last_node,
+            n_bits,
+            n_bytes,
+            data,
+        })
+    }
+
+    /// Encode the graph in graph6.
+    pub fn to_graph6(&self) -> Result<String, String> {
+        if self.last_node > 61 {
+            return Err("This program supports graph6 up to 62 nodes".to_string());
+        }
+        
+        let mut output = String::with_capacity(((self.n_bits + 1) / 6 + 1) as usize);
+        output.push((self.last_node as u8 + 64) as char);
+        output.push_str(&self.to_base64());
+        
+        Ok(output)
+    }
+
+    /// Encode the graph in base64.
+    fn to_base64(&self) -> String {
+        let n_chunks = self.n_bits / 6;
+        let n_remaining_bits = (self.n_bits % 6) as u8;
+        let mut output = String::with_capacity(n_chunks as usize + (n_remaining_bits != 0) as usize);
+
+        // should work for 0 < n_bits <= 8
+        let get_bits_at = |bit_i: u64, n_bits: u8| -> u8 {
+            let byte_i = (bit_i / 8) as usize;
+            let bit_offset = (bit_i % 8) as u8;
+            
+            let byte_cur = unsafe { *self.data.add(byte_i) };
+            if bit_offset > 8 - n_bits {
+                let byte_next = unsafe { *self.data.add(byte_i + 1) };
+                byte_cur << bit_offset >> (8 - n_bits) | byte_next >> (16 - n_bits - bit_offset)
+            } else {
+                byte_cur >> (8 - n_bits - bit_offset) & (0xff >> (8 - n_bits))
+            }
+        };
+
+        for chunk_i in 0..n_chunks {
+            let chunk = get_bits_at(6 * chunk_i, 6);
+            output.push((chunk + 0x3f) as char);
+        }
+
+        if (n_remaining_bits > 0) {
+            let chunk = get_bits_at(6 * n_chunks, n_remaining_bits) << (6 - n_remaining_bits);
+            output.push((chunk + 0x3f) as char);
+        }
+
+        output
+    }
+    
     /// Generate all graphs isomorphic to the graph.
     /// Warning: exponential complexity!
     pub fn permutations(&self) -> Vec<Self> {
-        let adj_lists = self.adj_lists();
+        let adj_lists = self.to_adj_lists();
 
         (0..=self.last_node)
             .permutations(self.last_node as usize + 1)
@@ -139,50 +253,6 @@ impl AdjMatrix {
             .collect()
     }
 
-    /// Encode the graph in base64.
-    pub fn to_base64(&self) -> String {
-        let n_chunks = self.n_bits / 6;
-        let n_remaining_bits = (self.n_bits % 6) as u8;
-        let mut output = String::with_capacity(n_chunks as usize + (n_remaining_bits != 0) as usize);
-
-        // should work for 0 < n_bits <= 8
-        let get_bits_at = |bit_i: u64, n_bits: u8| -> u8 {
-            let byte_i = (bit_i / 8) as usize;
-            let bit_offset = (bit_i % 8) as u8;
-            
-            let byte_cur = unsafe { *self.data.add(byte_i) };
-            if bit_offset > 8 - n_bits {
-                let byte_next = unsafe { *self.data.add(byte_i + 1) };
-                byte_cur << bit_offset >> (8 - n_bits) | byte_next >> (16 - n_bits - bit_offset)
-            } else {
-                byte_cur >> (8 - n_bits - bit_offset) & (0xff >> (8 - n_bits))
-            }
-        };
-        
-        for chunk_i in 0..n_chunks {
-            let chunk = get_bits_at(6 * chunk_i, 6);
-            output.push((chunk + 0x3f) as char);
-        }
-
-        let chunk = get_bits_at(6 * n_chunks, n_remaining_bits) << (6 - n_remaining_bits);
-        output.push((chunk + 0x3f) as char);
-
-        output
-    }
-
-    /// Encode the graph in graph6.
-    pub fn to_graph6(&self) -> Result<String, String> {
-        if self.last_node > 64 {
-            return Err("Cannot encode a graph with more than 64 vertices in graph6".to_string());
-        }
-        
-        let mut output = String::with_capacity(((self.n_bits + 1) / 6 + 1) as usize);
-        output.push((self.last_node as u8 + 64) as char);
-        output.push_str(&self.to_base64());
-        
-        Ok(output)
-    }
-    
     /// Check if there is a link between two nodes.
     pub fn is_edge(&self, node_a: u32, node_b: u32) -> Result<bool, String> {
         let bit_index = self.index_of(node_a, node_b)?;

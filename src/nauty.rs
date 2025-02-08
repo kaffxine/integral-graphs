@@ -41,6 +41,11 @@ pub fn labelg(graph6: String) -> Result<String, String> {
     out_file.read_to_string(&mut output)
         .map_err(|_| "labelg-rust: failed to read the file to string".to_string())?;
 
+    let output = output.chars().filter(|&c| {
+        let c = c as u8;
+        63 <= c && c <= 126
+    }).collect();
+
     Ok(output)
 
 }

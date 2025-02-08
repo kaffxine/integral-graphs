@@ -9,13 +9,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         panic!("do not run this program on non-64-bit arch");
     }
     
-    let n = 5;
-    let adjm = AdjMatrix::random(n, 0.5)?;
-    let perms = adjm.permutations();
-    for p in perms {
-        let g = p.graph6()?;
-        let c = labelg(g.clone())?;
-        println!("{} {}", g, c);
+    for i in (1..62) {
+        let adjm = AdjMatrix::random(i, 0.5)?;
+        let mut found = false;
+        let mut all_iso = true;
+        let labeled = labelg(adjm.to_graph6()?)?;
+        for am in adjm.permutations().into_iter() {
+            let g6 = am.to_graph6()?;
+            if labeled == g6 {
+                found = true;
+            }
+            if labelg(g6)? != labeled {
+                all_iso = false;
+            }
+        }
+        print!("{i}-node: ");
+        if found && all_iso {
+            println!("all as expected");
+        }
+        else {
+            println!("wrong: found={found} all_iso={all_iso}");
+        }
     }
 
     Ok(())
