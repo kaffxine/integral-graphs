@@ -11,16 +11,81 @@ pub mod matrix;
 pub use matrix::Matrix;
 
 pub mod database;
+pub use database::Database;
+
+use std::sync::{Arc, Mutex};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::mem::size_of::<usize>() != 8 {
         panic!("do not run this program on non-64-bit arch");
     }
 
+    test_generate();
 
 
     Ok(())
 }
+
+fn keep_generating(n_nodes: u64, max_degree: u32, db: Arc<Mutex<Database>>) -> Result<(), String> {
+
+    Ok(())
+}
+
+fn generate(n_nodes: u64, max_degree: u32, seed: usize) -> Result<AdjMatrix, String> {
+    let big_prime_1: usize = 18446744073709551557;
+    let big_prime_2: usize = 18446744073709551533;
+    let mut noise = seed;
+
+    let mut adjm = AdjMatrix::complete(n_nodes)?;
+    let n = n_nodes as usize;
+    let max_degree = max_degree as usize;
+
+    let mut neighbors_left = vec![n - 1; n];
+
+    let mut ready: usize = 0;
+    let mut active: usize = n - 1;
+    while ready < n {
+        active += 1;
+        if active == n {
+            active = 0;
+        }
+
+        if neighbors_left[active] <= max_degree {
+            continue;
+        }
+
+        noise = noise * big_prime_1 + big_prime_2;
+        let other = noise % n;
+
+        if active == other || neighbors_left[other] == 1 {
+            continue;
+        }
+
+        if adjm.is_edge(active as u32, other as u32)? {
+            adjm.set(active as u32, other as u32, false)?;
+            neighbors_left[active] -= 1;
+            neighbors_left[other] -= 1;
+            if neighbors_left[active] == max_degree {
+                ready += 1;
+            }
+            if neighbors_left[other] == max_degree {
+                ready += 1;
+            }
+        }
+
+    }
+    return Ok(adjm);
+}
+
+fn test_generate() -> Result<(), String> {
+    for i in 0..20 {
+        let adjm = generate(13, 4, 69420 + i)?;
+        let mt: Matrix = adjm.try_into()?;
+        println!("{mt}");
+    }
+    Ok(())
+}
+
 
 fn test_integral_detection_in_circular_graphs() -> Result<(), String> {
     for n in 2..15 {

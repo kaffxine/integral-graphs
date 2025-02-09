@@ -26,6 +26,18 @@ impl AdjMatrix {
         Ok(Self { last_node, n_bits, n_bytes, data })
     }
     
+    /// Initialize a complete graph.
+    pub fn complete(n_nodes: u64) -> Result<Self, String> {
+        let (last_node, n_bits, n_bytes) = Self::calculate_primitive_fields(n_nodes)?;
+        let data = unsafe { Self::alloc(n_bytes)? };
+
+        for i in 0..n_bytes {
+            unsafe { *data.add(i) = 0xff; };
+        }
+
+        Ok(Self { last_node, n_bits, n_bytes, data })
+    }
+    
     /// Initialize a random graph, with an approximate density.
     pub fn random(n_nodes: u64, density: f64) -> Result<Self, String> {
         if density < 0.0 || 1.0 < density {
