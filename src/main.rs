@@ -10,11 +10,19 @@ pub use spectral::is_integral;
 pub mod matrix;
 pub use matrix::Matrix;
 
+pub mod database;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::mem::size_of::<usize>() != 8 {
         panic!("do not run this program on non-64-bit arch");
     }
 
+
+
+    Ok(())
+}
+
+fn test_integral_detection_in_circular_graphs() -> Result<(), String> {
     for n in 2..15 {
         let mut c = AdjMatrix::empty(n as u64)?;
         for i in 0..n - 1 {
@@ -28,8 +36,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("boring");
         }
     }
+    Ok(())
+}
 
-    /*    
+fn test_nauty_integration_and_proper_labeling() -> Result<(), String> {
     for i in (1..62) {
         let adjm = AdjMatrix::random(i, 0.5)?;
         let mut found = false;
@@ -52,7 +62,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("wrong: found={found} all_iso={all_iso}");
         }
     }
-    */
-
     Ok(())
 }
