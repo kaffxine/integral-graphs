@@ -22,6 +22,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         panic!("do not run this program on non-64-bit arch");
     }
 
+    // remove
+    test_characteristic_polynomial();
+
     let db = Arc::new(Mutex::new(Database::new()));
     let stats = Arc::new(Mutex::new((0, 0, 0)));
 
@@ -48,6 +51,20 @@ const INTERACT_MESSAGE: &str = r#"Enter a command to perform an action:
   S -> show the stats
   Q -> quit
 Input: "#;
+
+fn test_characteristic_polynomial() -> Result<(), String> {
+    for i in 6..24 {
+        println!("TESTCASE #{i}");
+        let adjm = generate(i, (i / 2) as u32 + 1, 123456789)?;
+        let m: Matrix = adjm.try_into()?;
+        println!("{m}");
+        let char_poly = spectral::characteristic_polynomial(&m)?;
+        println!("{char_poly:?}");
+        println!();
+    }
+
+    Ok(())
+}
 
 fn interact(
     db: Arc<Mutex<Database>>,
@@ -127,8 +144,6 @@ fn keep_generating(
 }
 
 fn generate(n_nodes: u64, max_degree: u32, seed: usize) -> Result<AdjMatrix, String> {
-    let big_prime_1: usize = 18446744073709551557;
-    let big_prime_2: usize = 18446744073709551533;
     let mut noise = seed;
 
     let mut adjm = AdjMatrix::complete(n_nodes)?;
@@ -149,7 +164,7 @@ fn generate(n_nodes: u64, max_degree: u32, seed: usize) -> Result<AdjMatrix, Str
             continue;
         }
 
-        noise = noise * big_prime_1 + big_prime_2;
+        noise = (noise + 13) * (noise % 61 + 31);
         let other = noise % n;
 
         if active == other || neighbors_left[other] == 1 {
