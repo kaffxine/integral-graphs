@@ -10,7 +10,7 @@ pub fn is_integral(adjm: AdjMatrix) -> Result<bool, String> {
 
 /// Compute the characteristic polynomial of a square matrix
 /// using the Faddeev-LeVerrier algorithm
-pub fn characteristic_polynomial(matrix_a: &Matrix) -> Result<Vec<i64>, String> {
+pub fn characteristic_polynomial(matrix_a: &Matrix) -> Result<Vec<i128>, String> {
     let n = matrix_a.get_n();
     let mut coeffs = vec![0; (n as usize) + 1];
     coeffs[n as usize] = 1;
@@ -20,11 +20,11 @@ pub fn characteristic_polynomial(matrix_a: &Matrix) -> Result<Vec<i64>, String> 
         let multiplied = matrix::multiply(&matrix_a, &matrix_b)?;
         let trace = multiplied.trace()?;
 
-        if trace % (i as i64) != 0 {
-            return Err("something went really wrong :(".to_string());
+        if trace % (i as i128) != 0 {
+            return Err("trace size has overflown, probably".to_string());
         }
 
-        let coeff = -trace / (i as i64);
+        let coeff = -trace / (i as i128);
         coeffs[(n as usize) - (i as usize)] = coeff;
 
         let matrix_c = Matrix::zeroed(n)?;
@@ -38,7 +38,7 @@ pub fn characteristic_polynomial(matrix_a: &Matrix) -> Result<Vec<i64>, String> 
     Ok(coeffs)
 }
 
-pub fn divisors(number: i64) -> Vec<i64> {
+pub fn divisors(number: i128) -> Vec<i128> {
     if number == 0 {
         return vec![0];
     }
@@ -58,7 +58,7 @@ pub fn divisors(number: i64) -> Vec<i64> {
 
 /// Divides polynomial by (x - r)
 /// poly[i] represents the coefficient corresponding to x^i
-pub fn synthetic_division(poly: &[i64], r: i64) -> Option<Vec<i64>> {
+pub fn synthetic_division(poly: &[i128], r: i128) -> Option<Vec<i128>> {
     let n = poly.len();
     if n == 0 {
         return None;
@@ -80,7 +80,7 @@ pub fn synthetic_division(poly: &[i64], r: i64) -> Option<Vec<i64>> {
 
 /// Returns true if the polynomial can be factored into
 /// expressions (x - n), where n is an integer
-pub fn is_factorable(poly: &[i64]) -> bool {
+pub fn is_factorable(poly: &[i128]) -> bool {
     if poly.len() == 0 {
         return false;
     }

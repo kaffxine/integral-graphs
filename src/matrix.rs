@@ -4,7 +4,7 @@ use crate::graph::AdjMatrix;
 
 pub struct Matrix {
     n: u64,
-    data: *mut i64,
+    data: *mut i128,
 }
 
 pub fn add(m1: &Matrix, m2: &Matrix) -> Result<Matrix, String> {
@@ -50,7 +50,7 @@ impl Matrix {
         self.n
     }
 
-    pub fn set(&self, row: u64, column: u64, value: i64) -> Result<(), String> {
+    pub fn set(&self, row: u64, column: u64, value: i128) -> Result<(), String> {
         if row < self.n && column < self.n {
             let index = (row as usize) * (self.n as usize) + (column as usize);
             unsafe { *self.data.add(index) = value };
@@ -60,7 +60,7 @@ impl Matrix {
         }
     }
 
-    pub fn get(&self, row: u64, column: u64) -> Result<i64, String> {
+    pub fn get(&self, row: u64, column: u64) -> Result<i128, String> {
         if row < self.n && column < self.n {
             let index = (row as usize) * (self.n as usize) + (column as usize);
             Ok(unsafe { *self.data.add(index) })
@@ -71,8 +71,8 @@ impl Matrix {
 
     pub fn zeroed(n: u64) -> Result<Self, String> {
         let data = unsafe {
-            alloc::alloc_zeroed(alloc::Layout::array::<i64>((n as usize) * (n as usize))
-                .map_err(|_| "allocation layour error")?) as *mut i64
+            alloc::alloc_zeroed(alloc::Layout::array::<i128>((n as usize) * (n as usize))
+                .map_err(|_| "allocation layour error")?) as *mut i128
         };
 
         if data.is_null() {
@@ -90,7 +90,7 @@ impl Matrix {
         Ok(zeroed)
     }
 
-    pub fn from_vec_vec(input: Vec<Vec<i64>>) -> Result<Self, String> {
+    pub fn from_vec_vec(input: Vec<Vec<i128>>) -> Result<Self, String> {
         let n_rows = input.len() as u64;
         let m = Self::zeroed(n_rows)?;
         for (i, row) in input.into_iter().enumerate() {
@@ -105,7 +105,7 @@ impl Matrix {
         Ok(m)
     }
 
-    pub fn trace(&self) -> Result<i64, String> {
+    pub fn trace(&self) -> Result<i128, String> {
         let mut result = 0;
         for i in 0..self.n {
             result += self.get(i, i)?;
@@ -151,7 +151,7 @@ impl Drop for Matrix {
         unsafe {
             alloc::dealloc(
                 self.data as *mut u8,
-                alloc::Layout::array::<i64>((self.n as usize) * (self.n as usize))
+                alloc::Layout::array::<i128>((self.n as usize) * (self.n as usize))
                     .expect("failed to deallocate Matrix")
             )
         }

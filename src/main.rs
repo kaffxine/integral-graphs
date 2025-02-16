@@ -15,6 +15,7 @@ pub use database::Database;
 
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
+use std::time;
 use std::thread;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -23,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // remove
-    test_characteristic_polynomial();
+    test_characteristic_polynomial_for_complete_graphs()?;
 
     let db = Arc::new(Mutex::new(Database::new()));
     let stats = Arc::new(Mutex::new((0, 0, 0)));
@@ -52,13 +53,33 @@ const INTERACT_MESSAGE: &str = r#"Enter a command to perform an action:
   Q -> quit
 Input: "#;
 
+fn test_characteristic_polynomial_for_complete_graphs() -> Result<(), String> {
+    for i in 5..101 {
+        println!("TESTCASE #{i}");
+        let adjm = AdjMatrix::complete(i)?;
+        let m: Matrix = adjm.try_into()?;
+        println!("{m}");
+        let time_start = time::Instant::now();
+        let char_poly = spectral::characteristic_polynomial(&m)?;
+        let duration = time_start.elapsed();
+        println!("{}", duration.as_nanos());
+        println!("{char_poly:?}");
+        println!();
+    }
+
+    Ok(())
+}
+
 fn test_characteristic_polynomial() -> Result<(), String> {
-    for i in 6..24 {
+    for i in 5..101 {
         println!("TESTCASE #{i}");
         let adjm = generate(i, (i / 2) as u32 + 1, 123456789)?;
         let m: Matrix = adjm.try_into()?;
         println!("{m}");
+        let time_start = time::Instant::now();
         let char_poly = spectral::characteristic_polynomial(&m)?;
+        let duration = time_start.elapsed();
+        println!("{}", duration.as_nanos());
         println!("{char_poly:?}");
         println!();
     }
